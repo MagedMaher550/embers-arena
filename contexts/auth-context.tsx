@@ -1,45 +1,65 @@
-"use client"
+"use client";
 
-import type React from "react"
-
-import { createContext, useContext, useEffect, useState } from "react"
-import { type User, onAuthStateChanged } from "firebase/auth"
-import { auth } from "@/lib/firebase/config"
-import { getUserProfile, type UserProfile } from "@/lib/firebase/auth"
+import { createContext, useContext, useEffect, useState } from "react";
+import type { ReactNode } from "react";
+import { type User, onAuthStateChanged, signOut } from "firebase/auth";
+import { auth } from "@/lib/firebase/config";
+import { getUserProfile, type UserProfile } from "@/lib/firebase/auth";
 
 interface AuthContextType {
-  user: User | null
-  userProfile: UserProfile | null
-  loading: boolean
+  user: User | null;
+  userProfile: UserProfile | null;
+  loading: boolean;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   userProfile: null,
   loading: true,
-})
+  logout: async () => {},
+});
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
-  const [loading, setLoading] = useState(true)
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setUser(user)
-      if (user) {
-        const profile = await getUserProfile(user.uid)
-        setUserProfile(profile)
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      setUser(firebaseUser);
+      if (firebaseUser) {
+        try {
+          const profile = await getUserProfile(firebaseUser.uid);
+          setUserProfile(profile);
+        } catch (err) {
+          console.error("Error fetching user profile:", err);
+          setUserProfile(null);
+        }
       } else {
-        setUserProfile(null)
+        setUserProfile(null);
       }
-      setLoading(false)
-    })
+      setLoading(false);
+    });
 
-    return unsubscribe
-  }, [])
+    return unsubscribe;
+  }, []);
 
-  return <AuthContext.Provider value={{ user, userProfile, loading }}>{children}</AuthContext.Provider>
+  const logout = async () => {
+    try {
+      await signOut(auth);
+      setUser(null);
+      setUserProfile(null);
+    } catch (err) {
+      console.error("Error logging out:", err);
+    }
+  };
+
+  return (
+    <AuthContext.Provider value={{ user, userProfile, loading, logout }}>
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
-export const useAuth = () => useContext(AuthContext)
+export const useAuth = () => useContext(AuthContext);

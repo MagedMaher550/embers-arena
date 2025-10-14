@@ -1,8 +1,8 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { useAuth } from "@/contexts/auth-context"
-import { db } from "@/lib/firebase/config"
+import { useState, useEffect } from "react";
+import { useAuth } from "@/contexts/auth-context";
+import { db } from "@/lib/firebase/config";
 import {
   collection,
   query,
@@ -14,104 +14,97 @@ import {
   serverTimestamp,
   orderBy,
   limit,
-} from "firebase/firestore"
-import { Card } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Swords, Trophy, Clock, Flame, Send } from "lucide-react"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
-
-interface Duel {
-  id: string
-  challengerId: string
-  challengerName: string
-  challengerAvatar: string
-  opponentId: string
-  opponentName: string
-  opponentAvatar: string
-  quizId: string
-  quizTitle: string
-  status: "pending" | "active" | "completed"
-  wager: number
-  challengerScore?: number
-  opponentScore?: number
-  winnerId?: string
-  createdAt: any
-}
-
-interface Friend {
-  uid: string
-  username: string
-  avatar: string
-  level: number
-}
+} from "firebase/firestore";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Swords, Trophy, Clock, Flame, Send } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Duel, Friend } from "@/types";
 
 export default function DuelsPage() {
-  const { user } = useAuth()
-  const router = useRouter()
-  const [duels, setDuels] = useState<Duel[]>([])
-  const [friends, setFriends] = useState<Friend[]>([])
-  const [loading, setLoading] = useState(true)
-  const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null)
-  const [wager, setWager] = useState(50)
+  const { user } = useAuth();
+  const router = useRouter();
+  const [duels, setDuels] = useState<Duel[]>([]);
+  const [friends, setFriends] = useState<Friend[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null);
+  const [wager, setWager] = useState(50);
 
   useEffect(() => {
     if (user) {
-      loadDuels()
-      loadFriends()
+      loadDuels();
+      loadFriends();
     }
-  }, [user])
+  }, [user]);
 
   const loadDuels = async () => {
-    if (!user) return
+    if (!user) return;
 
     try {
-      const duelsRef = collection(db, "duels")
+      const duelsRef = collection(db, "duels");
       const q = query(
         duelsRef,
         where("participants", "array-contains", user.uid),
         orderBy("createdAt", "desc"),
-        limit(20),
-      )
-      const snapshot = await getDocs(q)
+        limit(20)
+      );
+      const snapshot = await getDocs(q);
       const duelsData = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
-      })) as Duel[]
-      setDuels(duelsData)
+      })) as Duel[];
+      setDuels(duelsData);
     } catch (error) {
-      console.error("Error loading duels:", error)
+      console.error("Error loading duels:", error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const loadFriends = async () => {
-    if (!user) return
+    if (!user) return;
 
     try {
-      const userDoc = await getDocs(query(collection(db, "users"), where("uid", "==", user.uid)))
+      const userDoc = await getDocs(
+        query(collection(db, "users"), where("uid", "==", user.uid))
+      );
       if (!userDoc.empty) {
-        const userData = userDoc.docs[0].data()
-        const friendIds = userData.friends || []
+        const userData = userDoc.docs[0].data();
+        const friendIds = userData.friends || [];
 
         if (friendIds.length > 0) {
-          const friendsQuery = query(collection(db, "users"), where("uid", "in", friendIds))
-          const friendsSnapshot = await getDocs(friendsQuery)
-          const friendsData = friendsSnapshot.docs.map((doc) => doc.data() as Friend)
-          setFriends(friendsData)
+          const friendsQuery = query(
+            collection(db, "users"),
+            where("uid", "in", friendIds)
+          );
+          const friendsSnapshot = await getDocs(friendsQuery);
+          const friendsData = friendsSnapshot.docs.map(
+            (doc) => doc.data() as Friend
+          );
+          setFriends(friendsData);
         }
       }
     } catch (error) {
-      console.error("Error loading friends:", error)
+      console.error("Error loading friends:", error);
     }
-  }
+  };
 
-  const createDuel = async (friendId: string, friendName: string, friendAvatar: string) => {
-    if (!user) return
+  const createDuel = async (
+    friendId: string,
+    friendName: string,
+    friendAvatar: string
+  ) => {
+    if (!user) return;
 
     try {
       const duelData = {
@@ -127,30 +120,32 @@ export default function DuelsPage() {
         wager,
         participants: [user.uid, friendId],
         createdAt: serverTimestamp(),
-      }
+      };
 
-      await addDoc(collection(db, "duels"), duelData)
-      setSelectedFriend(null)
-      loadDuels()
+      await addDoc(collection(db, "duels"), duelData);
+      setSelectedFriend(null);
+      loadDuels();
     } catch (error) {
-      console.error("Error creating duel:", error)
+      console.error("Error creating duel:", error);
     }
-  }
+  };
 
   const acceptDuel = async (duelId: string) => {
     try {
       await updateDoc(doc(db, "duels", duelId), {
         status: "active",
-      })
-      router.push(`/duels/${duelId}`)
+      });
+      router.push(`/duels/${duelId}`);
     } catch (error) {
-      console.error("Error accepting duel:", error)
+      console.error("Error accepting duel:", error);
     }
-  }
+  };
 
-  const pendingDuels = duels.filter((d) => d.status === "pending" && d.opponentId === user?.uid)
-  const activeDuels = duels.filter((d) => d.status === "active")
-  const completedDuels = duels.filter((d) => d.status === "completed")
+  const pendingDuels = duels.filter(
+    (d) => d.status === "pending" && d.opponentId === user?.uid
+  );
+  const activeDuels = duels.filter((d) => d.status === "active");
+  const completedDuels = duels.filter((d) => d.status === "completed");
 
   if (loading) {
     return (
@@ -160,7 +155,7 @@ export default function DuelsPage() {
           <p className="text-muted-foreground">Loading duels...</p>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -187,7 +182,9 @@ export default function DuelsPage() {
               </DialogHeader>
               <div className="space-y-4">
                 <div>
-                  <label className="text-sm text-muted-foreground mb-2 block">Ember Wager</label>
+                  <label className="text-sm text-muted-foreground mb-2 block">
+                    Ember Wager
+                  </label>
                   <input
                     type="number"
                     value={wager}
@@ -199,24 +196,37 @@ export default function DuelsPage() {
                   />
                 </div>
                 <div>
-                  <label className="text-sm text-muted-foreground mb-2 block">Select Friend</label>
+                  <label className="text-sm text-muted-foreground mb-2 block">
+                    Select Friend
+                  </label>
                   <div className="space-y-2 max-h-64 overflow-y-auto">
                     {friends.length === 0 ? (
-                      <p className="text-muted-foreground text-center py-4">No friends to challenge</p>
+                      <p className="text-muted-foreground text-center py-4">
+                        No friends to challenge
+                      </p>
                     ) : (
                       friends.map((friend) => (
                         <button
                           key={friend.uid}
-                          onClick={() => createDuel(friend.uid, friend.username, friend.avatar)}
+                          onClick={() =>
+                            createDuel(
+                              friend.uid,
+                              friend.username,
+                              friend.avatar
+                            )
+                          }
                           className="w-full flex items-center gap-3 p-3 bg-background hover:bg-accent/10 border border-accent/20 rounded-lg transition-colors"
                         >
                           <div className="text-2xl">{friend.avatar}</div>
                           <div className="flex-1 text-left">
                             <p className="font-semibold">{friend.username}</p>
-                            <p className="text-sm text-muted-foreground">Level {friend.level}</p>
+                            <p className="text-sm text-muted-foreground">
+                              Level {friend.level}
+                            </p>
                           </div>
                           <Badge variant="outline" className="border-accent/30">
-                            {wager} <Flame className="w-3 h-3 ml-1 text-accent" />
+                            {wager}{" "}
+                            <Flame className="w-3 h-3 ml-1 text-accent" />
                           </Badge>
                         </button>
                       ))
@@ -230,9 +240,15 @@ export default function DuelsPage() {
 
         <Tabs defaultValue="pending" className="space-y-6">
           <TabsList className="grid w-full grid-cols-3 bg-card/50">
-            <TabsTrigger value="pending">Pending ({pendingDuels.length})</TabsTrigger>
-            <TabsTrigger value="active">Active ({activeDuels.length})</TabsTrigger>
-            <TabsTrigger value="completed">Completed ({completedDuels.length})</TabsTrigger>
+            <TabsTrigger value="pending">
+              Pending ({pendingDuels.length})
+            </TabsTrigger>
+            <TabsTrigger value="active">
+              Active ({activeDuels.length})
+            </TabsTrigger>
+            <TabsTrigger value="completed">
+              Completed ({completedDuels.length})
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="pending" className="space-y-4">
@@ -248,14 +264,20 @@ export default function DuelsPage() {
                     <div className="text-3xl">{duel.challengerAvatar}</div>
                     <div className="flex-1">
                       <p className="font-semibold">{duel.challengerName}</p>
-                      <p className="text-sm text-muted-foreground">{duel.quizTitle}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {duel.quizTitle}
+                      </p>
                       <div className="flex items-center gap-2 mt-1">
                         <Badge variant="outline" className="border-accent/30">
-                          {duel.wager} <Flame className="w-3 h-3 ml-1 text-accent" />
+                          {duel.wager}{" "}
+                          <Flame className="w-3 h-3 ml-1 text-accent" />
                         </Badge>
                       </div>
                     </div>
-                    <Button onClick={() => acceptDuel(duel.id)} className="bg-accent hover:bg-accent/90">
+                    <Button
+                      onClick={() => acceptDuel(duel.id)}
+                      className="bg-accent hover:bg-accent/90"
+                    >
                       Accept
                     </Button>
                   </div>
@@ -284,9 +306,13 @@ export default function DuelsPage() {
                         <p className="font-semibold">
                           {duel.challengerName} vs {duel.opponentName}
                         </p>
-                        <p className="text-sm text-muted-foreground">{duel.quizTitle}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {duel.quizTitle}
+                        </p>
                       </div>
-                      <Badge className="bg-accent/20 text-accent border-accent/30">In Progress</Badge>
+                      <Badge className="bg-accent/20 text-accent border-accent/30">
+                        In Progress
+                      </Badge>
                     </div>
                   </Card>
                 </Link>
@@ -302,11 +328,15 @@ export default function DuelsPage() {
               </Card>
             ) : (
               completedDuels.map((duel) => {
-                const isWinner = duel.winnerId === user?.uid
+                const isWinner = duel.winnerId === user?.uid;
                 return (
                   <Card
                     key={duel.id}
-                    className={`p-4 border-2 ${isWinner ? "bg-accent/5 border-accent/40" : "bg-card/50 border-accent/20"}`}
+                    className={`p-4 border-2 ${
+                      isWinner
+                        ? "bg-accent/5 border-accent/40"
+                        : "bg-card/50 border-accent/20"
+                    }`}
                   >
                     <div className="flex items-center gap-4">
                       <div className="flex items-center gap-2">
@@ -332,12 +362,12 @@ export default function DuelsPage() {
                       )}
                     </div>
                   </Card>
-                )
+                );
               })
             )}
           </TabsContent>
         </Tabs>
       </div>
     </div>
-  )
+  );
 }

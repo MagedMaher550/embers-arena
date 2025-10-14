@@ -64,3 +64,29 @@ export interface ShopItem {
   requiredLevel: number
   preview?: string
 }
+
+
+export interface Duel {
+  id: string
+  challengerId: string
+  challengerName: string
+  challengerAvatar: string
+  opponentId: string
+  opponentName: string
+  opponentAvatar: string
+  quizId: string
+  quizTitle: string
+  status: "pending" | "active" | "completed"
+  wager: number
+  challengerScore?: number
+  opponentScore?: number
+  winnerId?: string
+  createdAt: any
+}
+
+export interface Friend {
+  uid: string
+  username: string
+  avatar: string
+  level: number
+}

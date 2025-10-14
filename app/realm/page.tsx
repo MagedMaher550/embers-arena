@@ -13,7 +13,9 @@ import Link from "next/link"
 export default function RealmPage() {
   const { userProfile } = useAuth()
 
-  if (!userProfile) return null
+  console.log(userProfile)
+
+  if (!userProfile) return <HeaderHUD />
 
   return (
     <ProtectedRoute>
