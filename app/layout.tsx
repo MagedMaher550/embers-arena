@@ -17,9 +17,12 @@ const pixelFont = Press_Start_2P({
 })
 
 export const metadata: Metadata = {
-  title: "Ember Arena - Quiz RPG",
+  title: "Ember Arena",
   description: "Pixel-art dark fantasy quiz battles. Level up, earn embers, and conquer the arena.",
-  generator: "v0.app",
+  generator: "MSS",
+  icons: {
+    icon: '/favicon.ico'
+  }
 }
 
 export default function RootLayout({
